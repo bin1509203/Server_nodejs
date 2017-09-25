@@ -10,8 +10,14 @@ app.listen(3000, function(req,res){
 });
 
 app.get('/topic/new', function(req,res){
-    res.render('new');
-});
+    fs.readdir('data', function(err, files){
+        if(err){
+            console.log(err)
+            res.status(500).send('Internal Server Error');
+        }
+        res.render('new', {topics:files});
+    });
+}); // new page를 main처럼 바꾸기 위해 topics 변수가 사용되어 내용 추가
 
 /////// 본문저장 : 사용자가 입력한 data를 폴더내 파일로 만들어 저장
 
@@ -24,10 +30,12 @@ app.post('/topic', function(req,res){
             console.log(err);
             res.status(500).send('Internal Server Error');
         }
-        res.send('Success!');
+        res.redirect('/topic/'+title);
+        // success 보여주는 것 보다는 작성한 페이지로 redirect시킴.
     });
 });
- 
+
+/* 
 //////// 글 목록 만들기 : 폴더 내에 저장되어 있는 파일을 불러옴
 app.get('/topic', function(req,res){
     fs.readdir('data', function(err, files){
@@ -63,5 +71,29 @@ app.get('/topic/:id', function(req,res){ // 하이퍼링크 클릭하여 사용�
             // fs.readdir 없이 바로 readfile하면 "file" directory에 접근할 수 없어 에러발생
             // files는 파일목록 가진배열, id는 현재 파일명, data는 해당 파일 내용
         });
+    });
+});
+*/ 
+
+// 위 코드를 하나로 합쳐서 중복을 줄인 코드는 다음과 같다.
+// [ ] 를 이용하여 여러 path에 대해 한번에 처리 가능.
+app.get(['/topic', '/topic/:id'], function(req,res){
+    fs.readdir('data', function(err, files){
+        if(err){// "data" directory(폴더)에 있는 contents를 읽어와 files 에 배열로 저장
+            console.log(err)
+            res.status(500).send('Internal Server Error');
+        }
+        var id = req.params.id;
+        if(id){ // id 값이 존재하면 즉 /topic/:id 경로인 경우
+            fs.readFile('data/'+id, 'utf-8', function(err,data){ 
+                if(err){// data/id변수값 에 해당하는 파일 읽어들여 data 라는 인자로 받아들임.
+                    console.log(err);
+                    res.status(500).send('Internal Server Error');
+                }
+                res.render('view', {topics:files, title:id, description:data});
+            })
+        } else{ // id 값이 없을 때 즉 /topic 경로인 경우
+            res.render('view', {topics:files, title:'Welcome', description:'Hello, JavaScript for server'});
+        }
     });
 });
