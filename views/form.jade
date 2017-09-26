@@ -1,0 +1,22 @@
+doctype html
+html
+    head
+        meta(charset='utf-8')
+        -// 속성을 부여할때는 괄호로!
+    body
+        form(action='/form_receiver' method='post')
+            -// 제출한 값을 /form_receiver 서버로 전송하기 위함. 더 정확히는 입력받은 정보로 url을 생성해줌.
+            -// method 를 생략하면 get 으로 인지. method='post'로 바꿔보면 url을 통한 query 전송이 더이상 X
+            -// form tag 내의 method에 따라 get 방식으로 전송할 것인지, post 방식으로 전송할 것인지를 결정
+            -// 이 method와 js의 app.get or app.post 가 매칭이 되어야 함.
+            -// 이 method에 따라서 어떤 app.~~를 참조하여 url을 확인할 것인지가 결정이 된다.
+            -// 만약 app.get('/test',~) app.post('/test',~) 둘 다 있다면 method에 따라 둘 중 하나를 선택.
+            p
+                input(type='text', name='title')
+            -// 사용자가 한줄 입력할 수 있는 control을 생성, p tag로 줄바꿈
+            p
+                textarea(name='description')
+            - // 사용자가 여러줄을 입력 가능한 control 생성. 서버가 구분 가능하게 이름 부여
+            p
+                input(type='submit')
+            - // 제출 버툰 만들기
