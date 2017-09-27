@@ -97,3 +97,37 @@ app.get(['/topic', '/topic/:id'], function(req,res){
         }
     });
 });
+
+//////     파일업로드
+// npm install --save multer
+var multer = require('multer'); // 파일 업로드 module인 'multer' loading
+//var upload = multer({ dest: 'uploads/' })  // uploads 폴더 만들어야함
+// dest : 사용자가 업로드한 파일이 어디에 최종적으로 저장될지를 지정. 
+
+/// dest 대신에 더 자세한 컨트롤을 위해 storage  사용!!
+var _storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.originalname);
+    }
+}); 
+var upload = multer({ storage: _storage });
+app.get('/upload', function(req,res){
+    res.render('upload');
+});
+app.post('/upload', upload.single('userfile'), function(req,res){
+    console.log(req.files);
+    res.send('uploaded : '+req.file.filename);
+    // req.file : 업로드한 파일. req.file.filename : 업로드한 파일명
+    // file 객체의 다른 속성들은 https://github.com/expressjs/multer 보기!
+});
+// 사용자가 post방식으로 'userfile' 이라고 저장한 데이터를 사용하기 위하여 
+// request 객체의 파일이라는 property를 암시적으로 추가하도록 하는 middle ware
+// upload.jade 에서 input form의 name 을 'userfile' 로 지정해놔야 함!!!
+
+//// 업로드한 파일을 직접 보여주기 위한 static 설정
+//app.use('/user', express.static('uploads'));
+// public 이라는 폴더 내 파일을 넣어두면 정적으로 접근할 수 있게 해줌
+// localhost:3000/user/파일명  으로 접근가능하게해줌!!
