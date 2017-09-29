@@ -1,0 +1,26 @@
+<db 설치 단계>
+1. java 설치 : http://www.oracle.com/technetwork/java/javase/downloads/jdk9-downloads-3848520.html
+
+2. orient db 설치 : OrientDB 2.2.28 GA Community Edition (September 26th, 2017)
+: http://orientdb.com/download/
+
+다운받은 압축폴더를 푼 후 그 폴더 위치 내의 bin 폴더로 cmd 를 이동시킨다.
+C:\Users\bin15\dev\orientdb-community-importers-2.2.28\orientdb-community-importers-2.2.28\bin
+여기서 server.bat 를 실행시킨다.
+비밀번호 설정 : *********
+
+3. 관리자 접속
+재실행시킨후 => Listening http connections on 0.0.0.0:2480  얘를 찾아서 마지막 "2480" 에 해당하는 숫자 찾기
+=> localhost:2480
+new database 
+name : o2  //  server user : root // pw : ************
+
+4. db 설정
+"SCHEMA" => "user classes" => "generic classes" => + new generic "topic"
+topic 클릭 => + new property
+"mandatory" : 사용자가 반드시 해당 정보를 입력하게 하는 경우.
+=> db table  구조의 설정
+
+5. nodejs 로 orientdb 제어 : https://github.com/orientechnologies/orientjs
+
+npm install orientjs --save
