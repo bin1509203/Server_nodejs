@@ -1,0 +1,11 @@
+get('topic/') : view.jade
+get('topic/:id') : view.jade
+get('topic/add') : add.jade
+    post('topic/add')
+    get('topic/:id') => add 하고 add한 게시물로 이동
+get('topic/:id/edit') : edit.jade
+    post('topic/:id/edit')
+    get('topic/:id') => edit 하고 edit한 게시물로 이동
+get('topic/:id/delete') : delete.jade
+    post('topic/:id/delete')
+    get('topic/')  => delete 하고 main page로 이동
