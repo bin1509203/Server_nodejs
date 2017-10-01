@@ -1,0 +1,38 @@
+doctype html
+html
+    head
+        meta(charset='utf-8')
+    body
+        h1 
+            a(href='/topic') Server Side JavaScript
+            -// home 으로 돌아갈 수 있게 링크 추가
+        ul
+            each topic in topics
+                -// topics라는 배열 내 값들을 차례로 반복적으로 불러옴.
+                li
+                    - rid = encodeURIComponent(topic['@rid'])
+                    a(href='/topic/'+rid)= topic.title
+                    -// 주소에 #18:0 등 @rid 값이 나오는걸 %2318%3A0 으로!
+                    -//a(href="/topic/"+topic['@rid'])= topic.title
+                    -// for 문과 같은 역할
+                    -// 하이퍼링크 주소가 " /topic/변수값 "
+                    -// 링크명도 변수값
+                    -// db내 'topic' class의 property(title, @rid, description)
+                    -// db 전엔 topic 변수 자체에 목록이 저장되어있었지만, db에선 class 내 property가 가지고있음
+        article
+            if topic
+                h2= topic.title
+                = topic.description
+                div= 'by '+topic.author
+            else
+                h2 Welcome
+                | This is server side javascript tutorial.
+        ul
+            li
+                a(href="/topic/add") add
+            if topic  
+                - rid = encodeURIComponent(topic['@rid'])
+                li      
+                    a(href='/topic/'+rid+'/edit') edit
+                 li
+                    a(href='/topic/'+rid+'/delete') delete                   
