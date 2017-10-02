@@ -1,6 +1,7 @@
 // 페이스북이나 구글 등을 이용한 로그인 구현하기 => passportjs module 이용
 // http://passportjs.org/docs/configure , 
 // npm install --save passport passport-local => local : 타사(페북,구글) 인증이 아닌 아이디와 pw만을 이용한 인증
+// npm install passport-facebook --save => 타사 인증
 
 var express = require('express');
 var session = require('express-session');
@@ -10,6 +11,7 @@ var bodyParser = require('body-parser'); // for app.post
 var bkfd2Password = require("pbkdf2-password"); // npm install --save pbkdf2-password
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy; // local(단순히 id+pw) 인증시스템 위한 모듈
+var FacebookStrategy = require('passport-facebook').Strategy; // 타사 인증시스템 위한 모듈
 var hasher = bkfd2Password();
 // => 단방향 해쉬를 여러번 반복하여 더 안정성을 높인 방법 :https://www.npmjs.com/package/pbkdf2-password
 var app = express();
@@ -52,6 +54,7 @@ app.get('/auth/login', function(req, res){
                 <input type="submit">
             </p>
         </form>
+    <a href="/auth/facebook">facebook</a>
     `;
     res.send(output);
 });
@@ -59,18 +62,19 @@ app.get('/auth/login', function(req, res){
 passport.serializeUser(function(user, done) { 
 // LocalStrategy 설정에서 done의 두번째 인자로 false가 아닌 경우 그 인자가 이 callback함수의 첫번째 인자로전달   
     console.log('serializeUser', user);
-    done(null, user.username); // user.username이 session에 저장됨. 여기서 두번째 인자는 식별자로 유일해야함.
+    done(null, user.authId); // user.authId이 session에 저장됨. 여기서 두번째 인자는 식별자로 유일해야함.
 });
 passport.deserializeUser(function(id, done) { 
 // 일단 한번 login 되어있으면 그 이후로는 deserializerUser 콜백함수 실행됨. user.username이 첫번째 인자로 들어옴.
-// 로그인 상태에서 새로고침하면 계속 deserializeUser 호출됨. 이때 'id'인자는 위에서 저장된 session 내의 username을 받아옴.
+// 로그인 상태에서 새로고침하면 계속 deserializeUser 호출됨. 이때 'id'인자는 위에서 저장된 session 내의 authId를 받아옴.
     console.log('deserializeUser', id);
     for(var i=0; i<users.length; i++){
         var user = users[i];
-        if(user.username === id){
-            done(null, user);
+        if(user.authId === id){
+            return done(null, user);
         }
     }
+    done('There is no user');
 });
 
 passport.use(new LocalStrategy(
@@ -100,6 +104,34 @@ passport.use(new LocalStrategy(
         // res.send('Who are you? <a href="/auth/login">login</a>');
     }
 ));// local에 대한 정의
+
+passport.use(new FacebookStrategy(
+    {
+        clientID: '2013625822254589', // facebook app의 'APP ID' https://developers.facebook.com/apps/2013625822254589/dashboard/
+        clientSecret: 'fa83d2b789b477c4aebacdc6a04ec7e5', // facebook_app_secret code : 절때 공개하면 안된다.
+        callbackURL: "/auth/facebook/callback",
+        profileFields: ['id', 'email', 'gender', 'link', 'locale',
+        'name', 'timezone', 'updated_time', 'verified', 'displayName']// 사용자 허가받아 추가로 가져올 정보 기술
+    },
+    function(accessToken, refreshToken, profile, done) { // profile과 done 이 중요!!
+        console.log(profile); // profile이 어떤 정보를 가지고 있는지 확인!
+        var authId = 'facebook:'+profile.id; // facebook을 통해 가입한 사용자 확인을 위한 id값 부여
+        for(var i=0; i<users.length; i++){
+            var user = users[i];
+            if(user.authId === authId){ // authId를 가지고 있다면= 기존사용자라면
+                return done(null, user); // 실행 후 serializationUser 의 콜백함수 실행.
+            }
+        }
+        var newuser = {
+            'authId':authId, // 'authId' 나 authId 나 둘다 상관은 없음.
+            'displayName':profile.displayName,
+            'email':profile.emails[0].value
+        };
+        users.push(newuser);
+        done(null, newuser);// 실행 후 serializationUser 의 콜백함수 실행.
+    }
+));// facebook에 대한 정의
+
 app.post('/auth/login', 
     passport.authenticate('local', // 첫번째 인자 : 'strategy'[페북인증처럼 타사인증인지 id.pw인증(loacal)인지 ]
         { 
@@ -110,27 +142,21 @@ app.post('/auth/login',
     )
 );
 
-// passport 이전에 사용한 암호화 방식 . ctrl+/ 하면 주석처리됨.
-// app.post('/auth/login', function(req, res){
-//     var uname = req.body.username;
-//     var pwd = req.body.password; // 사용자가 입력한 비밀번호
-//     for(var i=0; i<users.length; i++){ // user.length : user 수
-//         var user = users[i];
-//         if(uname == user.username){ // db에 저장되어있는 id 니? && hasher의 callback 끝나기전에 loop 다 도는거 방지위해 return
-//             return hasher({password:pwd, salt:user.salt}, function(err, pass ,salt, hash){// pbkdf2 암호화 기법 이용
-//                 if(hash === user.password){ // 로그인 위해 입력한 암호를 hash한 값과 db에 저장된 hash된 암호가 같니?
-//                     req.session.displayName = user.displayName; // session을 굽는다.
-//                     req.session.save(function(){
-//                         res.redirect('/welcome');
-//                     });
-//                 }else{
-//                     res.send('Who are you? <a href="/auth/login">login</a>');
-//                 }
-//             });
-//         };
-//     }
-//     res.send('Who are you? <a href="/auth/login">login</a>');
-// });
+app.get('/auth/facebook',
+    passport.authenticate('facebook', // 두번째 인자는 사용자의 허가를 받아야 사용할 수 있는 옵션 : https://developers.facebook.com/docs/facebook-login/permissions
+        {
+            scope:'email'
+        }
+    )
+);
+app.get('/auth/facebook/callback',
+    passport.authenticate('facebook', 
+        { 
+            successRedirect: '/welcome',
+            failureRedirect: '/auth/login' 
+        }
+    )
+);
 
 ////////////  logout 기능 구현
 
@@ -171,6 +197,7 @@ app.get('/auth/register', function(req, res){
 
 var users = [ // 초기 사용자 한명 설정(안해도됨)
     {
+        authId: 'local:egoing',
         username:'egoing', // ID 
         password: 'jY7g2qHMMTvvLWUl5DTWtnw52GJuf77iDoLgV0r+ft9kQO6N6aD7Fbc7RauH4HFG0PkK4DtKz+HoT+c1x0HEE4l9yI8v8X65Ok+lm5Pt2GG3HGgYcJ5Qkh9t9IKXSK2DUTyvh+OFxnwnPU25ov11oQMcubTF5ST3zd4ISzLsf+k=',
         salt: '+i6JxHCCZji3SF0Zh25JgC27ksaoLB0TSbFU6Aoj2WxJ9mqJ93ZMSyXMjBb4QmotCB5LJ9JTzOV/+A5Texic3A==',
@@ -181,6 +208,7 @@ var users = [ // 초기 사용자 한명 설정(안해도됨)
 app.post('/auth/register', function(req, res){
     hasher({password:req.body.password}, function(err, pass, salt, hash){
         var user = {
+            authId:'local:'+req.body.username,
             username: req.body.username,
             password: hash,
             salt: salt,
