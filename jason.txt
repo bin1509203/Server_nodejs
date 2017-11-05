@@ -1,0 +1,106 @@
+Problems with other answers:
+
+unsafe JSON.parse
+no response code checking
+All of the answers here use JSON.parse() in an unsafe way. You should always put all calls to JSON.parse() in a try/catch block especially when you parse JSON coming from an external source, like you do here.
+
+You can use request to parse the JSON automatically which wasn't mentioned here in other answers. There is already an answer using request module but it uses JSON.parse() to manually parse JSON - which should always be run inside a try {} catch {} block to handle errors of incorrect JSON or otherwise the entire app will crash. And incorrect JSON happens, trust me.
+
+Other answers that use http also use JSON.parse() without checking for exceptions that can happen and crash your application.
+
+Below I'll show few ways to handle it safely.
+
+All examples use a public GitHub API so everyone can try that code safely.
+
+Example with request
+
+Here's a working example with request that automatically parses JSON:
+
+'use strict';
+var request = require('request');
+
+var url = 'https://api.github.com/users/rsp';
+
+request.get({
+    url: url,
+    json: true,
+    headers: {'User-Agent': 'request'}
+  }, (err, res, data) => {
+    if (err) {
+      console.log('Error:', err);
+    } else if (res.statusCode !== 200) {
+      console.log('Status:', res.statusCode);
+    } else {
+      // data is already parsed as JSON:
+      console.log(data.html_url);
+    }
+});
+Example with http and try/catch
+
+This uses https - just change https to http if you want HTTP connections:
+
+'use strict';
+var https = require('https');
+
+var options = {
+    host: 'api.github.com',
+    path: '/users/rsp',
+    headers: {'User-Agent': 'request'}
+};
+
+https.get(options, function (res) {
+    var json = '';
+    res.on('data', function (chunk) {
+        json += chunk;
+    });
+    res.on('end', function () {
+        if (res.statusCode === 200) {
+            try {
+                var data = JSON.parse(json);
+                // data is available here:
+                console.log(data.html_url);
+            } catch (e) {
+                console.log('Error parsing JSON!');
+            }
+        } else {
+            console.log('Status:', res.statusCode);
+        }
+    });
+}).on('error', function (err) {
+      console.log('Error:', err);
+});
+Example with http and tryjson
+
+This example is similar to the above but uses the tryjson module. (Disclaimer: I am the author of that module.)
+
+'use strict';
+var https = require('https');
+var tryjson = require('tryjson');
+
+var options = {
+    host: 'api.github.com',
+    path: '/users/rsp',
+    headers: {'User-Agent': 'request'}
+};
+
+https.get(options, function (res) {
+    var json = '';
+
+    res.on('data', function (chunk) {
+        json += chunk;
+    });
+
+    res.on('end', function () {
+        if (res.statusCode === 200) {
+            var data = tryjson.parse(json);
+            console.log(data ? data.html_url : 'Error parsing JSON!');
+        } else {
+            console.log('Status:', res.statusCode);
+        }
+    });
+}).on('error', function (err) {
+      console.log('Error:', err);
+});
+Summary
+
+The example that uses request is the simplest. But if for some reason you don't want to use it then remember to always check the response code and to parse JSON safely.
